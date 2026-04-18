@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clare — Private Calendar</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy-deep: #0B1C3A;
+  --navy: #142952;
+  --navy-mid: #1A3A6B;
+  --navy-light: #2A4A7B;
+  --gold: #C8A96E;
+  --gold-light: #E2C98A;
+  --gold-dim: rgba(200,169,110,0.3);
+  --white: #0B1C3A;
+  --blue-mist: #4A6A9A;
+  --blue-pale: #1A3A6B;
+  --cream: #F5F4F0;
+  --linen: #F0EDE6;
+  --stone: #E8E5DE;
+  --muted: #5F5E5A;
+  --dim: #888780;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #F0EDE6; font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+.serif { font-family: 'Cormorant Garamond', serif; }
+
+/* SPLASH */
+#splash { position: fixed; inset: 0; background: var(--navy-deep); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.8s ease; }
+#splash .logo { font-family: 'Cormorant Garamond', serif; font-size: 52px; font-weight: 300; color: var(--gold); letter-spacing: 0.2em; margin-bottom: 8px; }
+#splash .tagline { font-size: 12px; color: rgba(143,171,196,0.5); letter-spacing: 0.2em; margin-bottom: 60px; }
+#splash .line { width: 1px; height: 60px; background: linear-gradient(to bottom, var(--gold), transparent); margin-bottom: 40px; }
+#splash .enter-btn { background: transparent; border: 0.5px solid var(--gold-dim); color: var(--gold); font-family: 'DM Sans', sans-serif; font-size: 11px; letter-spacing: 0.16em; padding: 12px 32px; cursor: pointer; transition: all 0.3s; }
+#splash .enter-btn:hover { background: rgba(200,169,110,0.08); border-color: var(--gold); }
+#splash.hidden { opacity: 0; pointer-events: none; }
+
+/* APP */
+#app { opacity: 0; transition: opacity 0.8s ease; min-height: 100vh; }
+#app.visible { opacity: 1; }
+
+/* TOP NAV */
+.topnav { background: #FFFFFF; border-bottom: 0.5px solid #E8E5DE; padding: 0 32px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.topnav-brand { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: #0B1C3A; letter-spacing: 0.18em; font-weight: 400; }
+.topnav-center { display: flex; gap: 4px; }
+.mode-btn { font-size: 11px; letter-spacing: 0.1em; padding: 6px 16px; border-radius: 20px; border: 0.5px solid transparent; cursor: pointer; transition: all 0.25s; color: #888780; background: transparent; }
+.mode-btn.active-dark { background: #0B1C3A; border-color: #0B1C3A; color: #C8A96E; }
+.mode-btn.active-light { background: var(--linen); border-color: var(--stone); color: #0B1C3A; }
+.topnav-right { display: flex; align-items: center; gap: 16px; }
+.nav-dot-status { width: 6px; height: 6px; border-radius: 50%; background: #5DCAA5; }
+.nav-user { font-size: 11px; color: #5F5E5A; letter-spacing: 0.04em; }
+
+/* VIEWS */
+.view { display: none; }
+.view.active { display: block; }
+
+/* MODAL OVERLAY */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(11,28,58,0.6); z-index: 200; align-items: center; justify-content: center; }
+.modal-overlay.active { display: flex; }
+.modal-card { background: #FFFFFF; border: 0.5px solid #E8E5DE; border-radius: 16px; width: 100%; max-width: 480px; border: 0.5px solid rgba(200,169,110,0.2); overflow: hidden; animation: fadeUp 0.25s ease; }
+.modal-header { padding: 20px 24px 16px; border-bottom: 0.5px solid #E8E5DE; display: flex; justify-content: space-between; align-items: center; }
+.modal-title { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: #0B1C3A; font-weight: 400; }
+.modal-close { background: none; border: none; color: #888780; font-size: 20px; cursor: pointer; line-height: 1; }
+.modal-close:hover { color: var(--gold); }
+.modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+.modal-field label { display: block; font-size: 10px; letter-spacing: 0.12em; color: #9A7B3A; margin-bottom: 6px; }
+.modal-field input, .modal-field select, .modal-field textarea { width: 100%; background: #F5F4F0; border: 0.5px solid #E8E5DE; border-radius: 7px; padding: 9px 12px; font-size: 13px; color: #0B1C3A; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s; }
+.modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--gold); }
+.modal-field input::placeholder, .modal-field textarea::placeholder { color: rgba(143,171,196,0.3); }
+.modal-field select option { background: var(--navy-mid); }
+.modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.privacy-toggle-row { display: flex; align-items: center; justify-content: space-between; background: #F5F4F0; border-radius: 8px; padding: 12px 14px; border: 0.5px solid #E8E5DE; }
+.privacy-toggle-label { font-size: 13px; color: #0B1C3A; font-weight: 500; }
+.privacy-toggle-sub { font-size: 11px; color: #888780; margin-top: 2px; }
+.privacy-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+.privacy-switch input { opacity: 0; width: 0; height: 0; }
+.privacy-slider { position: absolute; inset: 0; background: rgba(143,171,196,0.2); border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+.privacy-slider::before { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: transform 0.2s; }
+.privacy-switch input:checked + .privacy-slider { background: var(--gold); }
+.privacy-switch input:checked + .privacy-slider::before { transform: translateX(20px); }
+.modal-actions { padding: 14px 24px 20px; display: flex; gap: 10px; }
+.btn-modal-primary { flex: 1; background: var(--gold); color: var(--navy-deep); border: none; border-radius: 7px; padding: 11px; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
+.btn-modal-primary:hover { opacity: 0.9; }
+.btn-modal-sec { flex: 1; background: transparent; color: var(--blue-mist); border: 0.5px solid rgba(143,171,196,0.25); border-radius: 7px; padding: 11px; font-size: 13px; cursor: pointer; }
+
+/* SUCCESS TOAST */
+.toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: #0B1C3A; border: 0.5px solid rgba(200,169,110,0.3); border-radius: 8px; padding: 10px 20px; font-size: 12px; color: var(--gold); opacity: 0; transition: all 0.3s; z-index: 300; pointer-events: none; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* EXEC VIEW */
+.exec-wrap { background: #F5F4F0; min-height: calc(100vh - 52px); display: flex; }
+.exec-sidebar { width: 220px; background: #FFFFFF; border-right: 0.5px solid #E8E5DE; padding: 28px 0; flex-shrink: 0; display: flex; flex-direction: column; }
+.exec-sidebar-brand { padding: 0 22px 24px; border-bottom: 0.5px solid #E8E5DE; margin-bottom: 20px; }
+.exec-sidebar-name { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: #0B1C3A; font-weight: 400; }
+.exec-sidebar-role { font-size: 10px; color: #888780; letter-spacing: 0.08em; margin-top: 2px; }
+.mini-cal-wrap { padding: 0 16px 20px; border-bottom: 0.5px solid #E8E5DE; margin-bottom: 16px; }
+.mini-cal-head { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.mini-cal-month { font-size: 11px; color: #0B1C3A; font-weight: 500; }
+.mini-cal-nav { font-size: 13px; color: #888780; cursor: pointer; }
+.mini-grid { display: grid; grid-template-columns: repeat(7,1fr); text-align: center; gap: 1px; }
+.mg-dow { font-size: 8px; color: #B0ADA5; padding: 2px 0; }
+.mg-d { font-size: 10px; color: #888780; padding: 3px 1px; cursor: pointer; border-radius: 50%; transition: background 0.2s; }
+.mg-d:hover { background: rgba(200,169,110,0.1); }
+.mg-d.has { color: #9A7B3A; }
+.mg-d.today-d { background: #0B1C3A; color: #C8A96E; font-weight: 500; }
+.mg-d.other-d { color: #D3D1C7; }
+.exec-nav { padding: 0 12px; }
+.exec-nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; transition: background 0.2s; }
+.exec-nav-item:hover { background: #F5F4F0; }
+.exec-nav-item.active { background: #F0EDE6; }
+.end-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(143,171,196,0.2); flex-shrink: 0; }
+.end-dot.gold { background: var(--gold); }
+.exec-nav-label { font-size: 12px; color: #888780; }
+.exec-nav-label.active { color: #9A7B3A; }
+.exec-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.exec-page { display: none; flex-direction: column; height: 100%; }
+.exec-page.active { display: flex; }
+
+/* BRIEFING */
+.briefing-scroll { flex: 1; overflow-y: auto; padding: 28px 32px; }
+.briefing-scroll::-webkit-scrollbar { width: 3px; }
+.briefing-scroll::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+.brief-greeting { margin-bottom: 28px; }
+.brief-date { font-size: 10px; color: #9A7B3A; letter-spacing: 0.14em; margin-bottom: 10px; }
+.brief-title { font-family: 'Cormorant Garamond', serif; font-size: 30px; color: #0B1C3A; font-weight: 300; line-height: 1.2; margin-bottom: 6px; }
+.brief-sub { font-size: 13px; color: #5F5E5A; }
+.brief-block { background: #FFFFFF; border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; border: 0.5px solid #E8E5DE; }
+.brief-block-label { font-size: 9px; letter-spacing: 0.14em; color: #9A7B3A; margin-bottom: 12px; }
+.ag-row { display: flex; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid #ECEAE4; }
+.ag-row:last-child { border-bottom: none; padding-bottom: 0; }
+.ag-time-d { font-size: 11px; color: #9A7B3A; min-width: 40px; padding-top: 1px; }
+.ag-body-d { flex: 1; }
+.ag-title-d { font-size: 13px; font-weight: 500; color: #0B1C3A; margin-bottom: 2px; }
+.ag-loc-d { font-size: 11px; color: #888780; margin-bottom: 6px; }
+.ag-intel-d { background: #FDF8EE; border-left: 2px solid rgba(200,169,110,0.4); border-radius: 0 5px 5px 0; padding: 6px 10px; }
+.ag-intel-d p { font-size: 11px; color: #5F5E5A; line-height: 1.5; }
+.ag-intel-d span { color: #9A7B3A; font-weight: 500; }
+.kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.kpi-c { background: #F5F4F0; border-radius: 8px; border: 0.5px solid #E8E5DE; padding: 10px 12px; }
+.kpi-lbl { font-size: 8px; color: #B0ADA5; letter-spacing: 0.1em; margin-bottom: 5px; }
+.kpi-val { font-size: 18px; font-weight: 500; color: #0B1C3A; }
+.kpi-dl { font-size: 10px; margin-top: 2px; }
+.kpi-dl.up { color: #5DCAA5; } .kpi-dl.dn { color: #F09595; } .kpi-dl.neu { color: rgba(143,171,196,0.3); }
+.alert-row { display: flex; gap: 10px; padding: 9px 0; border-bottom: 0.5px solid #ECEAE4; align-items: flex-start; }
+.alert-row:last-child { border-bottom: none; }
+.al-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.al-dot.gold { background: var(--gold); } .al-dot.red { background: #F09595; } .al-dot.teal { background: #5DCAA5; }
+.al-text { font-size: 12px; color: #5F5E5A; line-height: 1.5; }
+.al-text strong { color: #0B1C3A; font-weight: 500; }
+.news-row { display: flex; gap: 10px; padding: 9px 0; border-bottom: 0.5px solid #ECEAE4; }
+.news-row:last-child { border-bottom: none; }
+.news-src { font-size: 9px; color: #9A7B3A; letter-spacing: 0.06em; min-width: 52px; padding-top: 2px; }
+.news-txt { font-size: 12px; color: #5F5E5A; line-height: 1.4; flex: 1; }
+.btn-new-event { background: var(--gold); color: var(--navy-deep); border: none; border-radius: 7px; padding: 9px 18px; font-size: 12px; font-weight: 500; cursor: pointer; letter-spacing: 0.04em; margin-top: 16px; transition: opacity 0.2s; }
+.btn-new-event:hover { opacity: 0.9; }
+
+/* CALENDAR DARK */
+.cal-dark-header { background: #FFFFFF; padding: 14px 28px; border-bottom: 0.5px solid #E8E5DE; display: flex; align-items: center; justify-content: space-between; }
+.cal-dark-title { font-size: 15px; font-weight: 500; color: #0B1C3A; }
+.cal-dark-tabs { display: flex; gap: 4px; }
+.cal-tab { font-size: 11px; padding: 4px 12px; border-radius: 5px; color: #888780; cursor: pointer; transition: all 0.2s; }
+.cal-tab.active { background: #F0EDE6; color: #9A7B3A; }
+.cal-dark-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.dow-strip-dark { display: grid; grid-template-columns: 44px repeat(7,1fr); background: #F5F4F0; border-bottom: 0.5px solid #E8E5DE; }
+.dow-cell-dark { padding: 8px 4px; text-align: center; }
+.dow-lbl-dark { font-size: 8px; color: #B0ADA5; letter-spacing: 0.08em; }
+.dow-num-dark { font-size: 15px; font-weight: 500; color: #0B1C3A; margin-top: 1px; }
+.dow-num-dark.tod { background: #0B1C3A; color: #C8A96E; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 13px; margin: 1px auto 0; }
+.grid-dark { flex: 1; display: grid; grid-template-columns: 44px repeat(7,1fr); overflow-y: auto; }
+.grid-dark::-webkit-scrollbar { width: 3px; }
+.grid-dark::-webkit-scrollbar-thumb { background: var(--gold-dim); }
+.time-col-dark .ts { height: 48px; border-bottom: 0.5px solid #ECEAE4; padding: 4px 6px 0 0; text-align: right; font-size: 9px; color: #C0BDB5; }
+.dcol { border-left: 0.5px solid #ECEAE4; position: relative; background: #FFFFFF; }
+.dcol .ds { height: 48px; border-bottom: 0.5px solid #F0EDE6; }
+.dcol.wknd { opacity: 0.5; background: #F5F4F0; }
+.ev-dark { position: absolute; left: 3px; right: 3px; border-radius: 5px; padding: 3px 6px; cursor: pointer; overflow: hidden; transition: opacity 0.2s; }
+.ev-dark:hover { opacity: 0.85; }
+.ev-dark .et { font-size: 10px; font-weight: 500; line-height: 1.3; }
+.ev-dark .es { font-size: 9px; margin-top: 1px; }
+.ev-nv { background: rgba(26,58,107,0.7); border-left: 2px solid #4A7AC0; }
+.ev-nv .et { color: #B5D4F4; } .ev-nv .es { color: #7AA0CC; }
+.ev-gd { background: rgba(200,169,110,0.12); border-left: 2px solid var(--gold); }
+.ev-gd .et { color: var(--gold-light); } .ev-gd .es { color: var(--gold); }
+.ev-tl { background: rgba(15,110,86,0.2); border-left: 2px solid #1D9E75; }
+.ev-tl .et { color: #5DCAA5; } .ev-tl .es { color: #1D9E75; }
+.ev-pn { background: rgba(200,169,110,0.05); border-left: 2px dashed rgba(200,169,110,0.3); }
+.ev-pn .et { color: rgba(200,169,110,0.5); } .ev-pn .es { color: rgba(200,169,110,0.35); }
+.ev-priv { background: rgba(83,74,183,0.2); border-left: 2px solid #7F77DD; }
+.ev-priv .et { color: #AFA9EC; } .ev-priv .es { color: #7F77DD; }
+
+/* INVITE PAGE */
+.invite-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px; background: #F5F4F0; }
+.invite-card { background: #FFFFFF; border-radius: 16px; width: 100%; max-width: 420px; overflow: hidden; border: 0.5px solid #E8E5DE; box-shadow: 0 4px 24px rgba(11,28,58,0.08); }
+.inv-top { padding: 24px 28px 20px; border-bottom: 0.5px solid #E8E5DE; background: #0B1C3A; border-radius: 16px 16px 0 0; }
+.inv-brand { font-size: 10px; letter-spacing: 0.18em; color: var(--gold); margin-bottom: 18px; }
+.inv-avatar-row { display: flex; align-items: center; gap: 12px; }
+.inv-avatar { width: 46px; height: 46px; border-radius: 50%; background: var(--navy-light); border: 1.5px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; color: var(--gold); }
+.inv-sender { font-size: 16px; font-weight: 500; color: #F5F3EE; }
+.inv-sender-role { font-size: 11px; color: #8FABC4; margin-top: 2px; }
+.inv-body { padding: 22px 28px; }
+.inv-label { font-size: 9px; letter-spacing: 0.14em; color: var(--gold); margin-bottom: 8px; }
+.inv-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: #0B1C3A; font-weight: 400; margin-bottom: 18px; line-height: 1.3; }
+.inv-meta { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 11px; }
+.inv-meta-txt { font-size: 12px; color: #5F5E5A; line-height: 1.4; }
+.inv-meta-txt strong { color: #0B1C3A; font-weight: 500; }
+.inv-divider { height: 0.5px; background: #E8E5DE; margin: 16px 0; }
+.inv-note-lbl { font-size: 9px; letter-spacing: 0.12em; color: var(--gold); margin-bottom: 6px; }
+.inv-note { font-size: 12px; color: #5F5E5A; line-height: 1.5; font-style: italic; }
+.inv-actions { padding: 16px 28px 24px; display: flex; flex-direction: column; gap: 8px; }
+.inv-btn-accept { background: var(--gold); color: var(--navy-deep); border: none; border-radius: 7px; padding: 12px; font-size: 12px; font-weight: 500; cursor: pointer; letter-spacing: 0.05em; transition: opacity 0.2s; }
+.inv-btn-accept:hover { opacity: 0.9; }
+.inv-btn-row { display: flex; gap: 8px; }
+.inv-btn-sec { flex: 1; background: transparent; color: #5F5E5A; border: 0.5px solid #E8E5DE; border-radius: 7px; padding: 10px; font-size: 12px; cursor: pointer; }
+.inv-footer { padding: 12px 28px; border-top: 0.5px solid #E8E5DE; display: flex; justify-content: space-between; }
+.inv-footer-txt { font-size: 9px; color: #B0ADA5; letter-spacing: 0.06em; }
+
+/* ASSISTANT VIEW */
+.asst-wrap { background: var(--cream); min-height: calc(100vh - 52px); display: flex; }
+.asst-sidebar { width: 220px; background: #fff; border-right: 0.5px solid var(--stone); padding: 24px 0; flex-shrink: 0; display: flex; flex-direction: column; }
+.asst-sidebar-brand { padding: 0 20px 20px; border-bottom: 0.5px solid var(--stone); margin-bottom: 16px; }
+.asst-brand-name { font-family: 'Cormorant Garamond', serif; font-size: 16px; color: var(--navy); letter-spacing: 0.1em; font-weight: 400; }
+.asst-brand-sub { font-size: 9px; color: var(--dim); letter-spacing: 0.1em; margin-top: 2px; }
+.asst-execs { padding: 0 18px 16px; border-bottom: 0.5px solid var(--stone); margin-bottom: 14px; }
+.asst-execs-lbl { font-size: 9px; color: var(--dim); letter-spacing: 0.1em; margin-bottom: 10px; }
+.asst-exec-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer; }
+.asst-exec-av { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; flex-shrink: 0; border: 1px solid; }
+.asst-exec-av.av1 { background: #EAF0F8; border-color: #C8D8EC; color: var(--navy-light); }
+.asst-exec-av.av1.on { background: var(--navy); border-color: var(--navy); color: var(--gold); }
+.asst-exec-av.av2 { background: #E8F5EF; border-color: #9FE1CB; color: #0F6E56; }
+.asst-exec-av.av3 { background: #FDF3E0; border-color: #E2C98A; color: #9A7B3A; }
+.asst-exec-name { font-size: 12px; color: var(--muted); }
+.asst-exec-name.on { color: var(--navy); font-weight: 500; }
+.asst-nav { padding: 0 12px; }
+.asst-nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; transition: background 0.2s; }
+.asst-nav-item:hover { background: var(--linen); }
+.asst-nav-item.active { background: var(--linen); }
+.asst-nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--stone); flex-shrink: 0; }
+.asst-nav-dot.gold { background: var(--gold); }
+.asst-nav-lbl { font-size: 12px; color: var(--dim); }
+.asst-nav-lbl.active { color: #9A7B3A; font-weight: 500; }
+.asst-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.asst-page { display: none; flex-direction: column; height: 100%; }
+.asst-page.active { display: flex; }
+
+/* ASST PANEL */
+.asst-panel-scroll { flex: 1; overflow-y: auto; padding: 24px 28px; }
+.asst-panel-scroll::-webkit-scrollbar { width: 3px; }
+.asst-panel-scroll::-webkit-scrollbar-thumb { background: var(--stone); }
+.asst-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+.asst-page-title { font-size: 16px; font-weight: 500; color: var(--navy); }
+.asst-date-lbl { font-size: 12px; color: var(--muted); }
+.btn-new-light { background: var(--navy); color: var(--gold); border: none; border-radius: 6px; padding: 7px 14px; font-size: 11px; font-weight: 500; cursor: pointer; letter-spacing: 0.04em; transition: opacity 0.2s; }
+.btn-new-light:hover { opacity: 0.85; }
+.voice-strip { background: #fff; border: 0.5px solid var(--stone); border-left: 2px solid var(--gold); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+.voice-ic { width: 28px; height: 28px; border-radius: 50%; background: var(--linen); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.voice-txt { font-size: 12px; color: var(--muted); flex: 1; font-style: italic; }
+.voice-txt strong { color: #9A7B3A; font-style: normal; }
+.voice-age { font-size: 10px; color: var(--dim); }
+.asst-day-cols { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 18px; }
+.asst-col-head { font-size: 9px; letter-spacing: 0.1em; color: var(--dim); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 0.5px solid var(--stone); }
+.asst-col-head span { color: #9A7B3A; }
+.asst-ev { background: #fff; border-radius: 7px; border: 0.5px solid var(--stone); padding: 9px 11px; margin-bottom: 7px; cursor: pointer; transition: border-color 0.2s; }
+.asst-ev:hover { border-color: var(--gold); }
+.asst-ev.gold-ev { border-color: var(--gold); border-left: 2px solid var(--gold); background: #FDFAF5; }
+.asst-ev.dim-ev { opacity: 0.4; }
+.asst-ev.priv-ev { border-left: 2px solid #7F77DD; background: #F5F4FE; }
+.asst-ev-time { font-size: 9px; color: #9A7B3A; letter-spacing: 0.06em; margin-bottom: 3px; }
+.asst-ev-title { font-size: 12px; color: var(--navy); font-weight: 500; line-height: 1.3; margin-bottom: 3px; }
+.asst-ev-sub { font-size: 11px; color: var(--muted); }
+.asst-badge { display: inline-block; font-size: 9px; padding: 2px 7px; border-radius: 10px; margin-top: 5px; }
+.asst-badge.pend { background: #FDF3E0; color: #9A7B3A; }
+.asst-badge.conf { background: #E8F5EF; color: #0F6E56; }
+.asst-badge.voice-b { background: var(--linen); color: var(--navy-light); }
+.asst-badge.priv-b { background: #EEEDFE; color: #534AB7; }
+.asst-badge.new-b { background: #E8F5EF; color: #0F6E56; font-weight: 500; }
+.inbox-lbl { font-size: 9px; letter-spacing: 0.1em; color: var(--dim); margin-bottom: 10px; }
+.inbox-row { display: flex; gap: 10px; padding: 9px 0; border-bottom: 0.5px solid #ECEAE4; align-items: center; }
+.inbox-row:last-child { border-bottom: none; }
+.in-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.in-dot.g { background: var(--gold); } .in-dot.n { background: var(--stone); }
+.in-txt { font-size: 12px; color: var(--muted); flex: 1; line-height: 1.3; }
+.in-txt strong { color: var(--navy); font-weight: 500; }
+.in-time { font-size: 10px; color: var(--dim); }
+.in-btn { font-size: 10px; background: var(--navy); color: var(--gold); border: none; border-radius: 5px; padding: 4px 10px; cursor: pointer; flex-shrink: 0; }
+
+/* CONFIG STYLES */
+.cfg-kpi-card { background:#fff;border:0.5px solid var(--stone);border-radius:8px;padding:10px 12px;transition:border-color 0.2s; }
+.cfg-kpi-card.active-kpi { border-color:rgba(200,169,110,0.4); }
+.cfg-kpi-top { display:flex;justify-content:space-between;align-items:center;margin-bottom:4px; }
+.cfg-kpi-lbl { font-size:11px;color:var(--navy);font-weight:500; }
+.cfg-kpi-src { font-size:10px;color:var(--dim); }
+.cfg-toggle { width:28px;height:16px;border-radius:8px;background:var(--stone);border:none;cursor:pointer;position:relative;flex-shrink:0;transition:background 0.2s; }
+.cfg-toggle::after { content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform 0.2s; }
+.cfg-toggle.on { background:var(--gold); }
+.cfg-toggle.on::after { transform:translateX(12px); }
+.cfg-add-btn { background:transparent;border:0.5px dashed var(--stone);border-radius:7px;padding:8px 14px;font-size:11px;color:var(--dim);cursor:pointer;width:100%;transition:all 0.2s; }
+.cfg-add-btn:hover { border-color:var(--gold);color:#9A7B3A; }
+.cfg-alert-row { display:flex;align-items:flex-start;gap:10px;background:#fff;border:0.5px solid var(--stone);border-radius:8px;padding:10px 12px; }
+.cfg-alert-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px; }
+.cfg-alert-body { flex:1; }
+.cfg-alert-title { font-size:12px;color:var(--navy);font-weight:500;margin-bottom:2px; }
+.cfg-alert-sub { font-size:11px;color:var(--muted); }
+.cfg-val { color:#9A7B3A;font-weight:500;border-bottom:1px dashed var(--gold);cursor:pointer;padding:0 2px; }
+
+/* INTEGRATIONS PAGE */
+.integ-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-bottom: 16px; }
+.integ-card { background: #fff; border-radius: 10px; border: 0.5px solid var(--stone); padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: border-color 0.2s; }
+.integ-card:hover { border-color: var(--gold); }
+.integ-card.connected { border-color: rgba(29,158,117,0.4); }
+.integ-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+.integ-body { flex: 1; }
+.integ-name { font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 2px; }
+.integ-desc { font-size: 11px; color: var(--muted); }
+.integ-status { font-size: 10px; padding: 2px 8px; border-radius: 10px; flex-shrink: 0; }
+.integ-status.on { background: #E8F5EF; color: #0F6E56; }
+.integ-status.off { background: var(--linen); color: var(--dim); }
+
+/* CONTACTS PAGE */
+.contact-grid { display: flex; flex-direction: column; gap: 8px; }
+.contact-card { background: #fff; border-radius: 10px; border: 0.5px solid var(--stone); padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: border-color 0.2s; }
+.contact-card:hover { border-color: var(--gold); }
+.contact-av { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+.contact-body { flex: 1; }
+.contact-name { font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 2px; }
+.contact-role { font-size: 11px; color: var(--muted); }
+.contact-meta { text-align: right; }
+.contact-last { font-size: 10px; color: var(--dim); margin-bottom: 3px; }
+.contact-tag { font-size: 9px; padding: 2px 8px; border-radius: 10px; }
+.contact-tag.vip { background: #FDF3E0; color: #9A7B3A; }
+.contact-tag.biz { background: #EAF0F8; color: #1A3A6B; }
+
+/* PENDIENTES PAGE */
+.pend-section { margin-bottom: 20px; }
+.pend-section-label { font-size: 9px; letter-spacing: 0.12em; color: var(--dim); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--stone); }
+.pend-item { background: #fff; border-radius: 8px; border: 0.5px solid var(--stone); padding: 11px 14px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; transition: border-color 0.2s; }
+.pend-item:hover { border-color: var(--gold); }
+.pend-item.urgent { border-left: 2px solid #F09595; }
+.pend-item.normal { border-left: 2px solid var(--gold); }
+.pend-item.done { opacity: 0.4; }
+.pend-check { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--stone); flex-shrink: 0; margin-top: 1px; transition: all 0.2s; }
+.pend-check.checked { background: var(--gold); border-color: var(--gold); }
+.pend-body { flex: 1; }
+.pend-title { font-size: 12px; font-weight: 500; color: var(--navy); margin-bottom: 2px; line-height: 1.3; }
+.pend-sub { font-size: 11px; color: var(--muted); }
+.pend-date { font-size: 10px; color: var(--dim); flex-shrink: 0; }
+
+/* CALENDAR LIGHT */
+.cal-light-header { background: #fff; padding: 14px 24px; border-bottom: 0.5px solid var(--stone); display: flex; align-items: center; justify-content: space-between; }
+.cal-light-title { font-size: 15px; font-weight: 500; color: var(--navy); }
+.cal-tab-l { font-size: 11px; padding: 4px 12px; border-radius: 5px; color: var(--dim); cursor: pointer; transition: all 0.2s; }
+.cal-tab-l.active { background: var(--linen); color: #9A7B3A; border: 0.5px solid var(--stone); }
+.dow-strip-light { display: grid; grid-template-columns: 44px repeat(7,1fr); background: #fff; border-bottom: 0.5px solid var(--stone); }
+.dow-cell-l { padding: 8px 4px; text-align: center; }
+.dow-lbl-l { font-size: 8px; color: var(--dim); letter-spacing: 0.08em; }
+.dow-num-l { font-size: 15px; font-weight: 500; color: var(--navy); margin-top: 1px; }
+.dow-num-l.tod { background: var(--navy); color: var(--gold); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 13px; margin: 1px auto 0; }
+.grid-light { flex: 1; display: grid; grid-template-columns: 44px repeat(7,1fr); overflow-y: auto; background: var(--cream); }
+.grid-light::-webkit-scrollbar { width: 3px; }
+.grid-light::-webkit-scrollbar-thumb { background: var(--stone); }
+.tsl { height: 48px; border-bottom: 0.5px solid #ECEAE4; padding: 4px 5px 0 0; text-align: right; font-size: 9px; color: #C0BDB5; }
+.dcol-l { border-left: 0.5px solid #ECEAE4; position: relative; background: #fff; }
+.dcol-l .dsl { height: 48px; border-bottom: 0.5px solid var(--linen); }
+.dcol-l.wknd-l { background: var(--cream); opacity: 0.5; }
+.ev-light { position: absolute; left: 3px; right: 3px; border-radius: 5px; padding: 3px 6px; cursor: pointer; overflow: hidden; }
+.ev-light .et { font-size: 10px; font-weight: 500; line-height: 1.3; }
+.ev-light .es { font-size: 9px; margin-top: 1px; }
+.ev-l-nv { background: #EAF0F8; border-left: 2px solid #1A3A6B; }
+.ev-l-nv .et { color: var(--navy); } .ev-l-nv .es { color: #4A6A9A; }
+.ev-l-gd { background: #FDF3E0; border-left: 2px solid var(--gold); }
+.ev-l-gd .et { color: #7A5020; } .ev-l-gd .es { color: #9A7B3A; }
+.ev-l-tl { background: #E8F5EF; border-left: 2px solid #1D9E75; }
+.ev-l-tl .et { color: #0A5038; } .ev-l-tl .es { color: #0F6E56; }
+.ev-l-pn { background: #FFF8EE; border-left: 2px dashed var(--gold); }
+.ev-l-pn .et { color: #9A7B3A; } .ev-l-pn .es { color: #B89050; }
+.ev-l-priv { background: #EEEDFE; border-left: 2px solid #7F77DD; }
+.ev-l-priv .et { color: #3C3489; } .ev-l-priv .es { color: #534AB7; }
+.ev-l-new { background: #E8F5EF; border-left: 2px solid #1D9E75; border: 1px solid #1D9E75; }
+.ev-l-new .et { color: #0A5038; } .ev-l-new .es { color: #0F6E56; }
+
+/* FOOTER */
+.view-footer { background: #0B1C3A; border-top: 0.5px solid rgba(200,169,110,0.1); padding: 10px 32px; display: flex; justify-content: space-between; align-items: center; }
+.vf-brand { font-size: 9px; color: rgba(143,171,196,0.25); letter-spacing: 0.1em; }
+.vf-privacy { font-size: 9px; color: rgba(200,169,110,0.3); }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+.exec-page.active, .asst-page.active { animation: fadeUp 0.3s ease; }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash" style="background:#F5F4F0;">
+  <div class="logo" style="color:#0B1C3A;">CLARE</div>
+  <div class="tagline" style="color:rgba(26,58,107,0.5);">PRIVATE CALENDAR · EXECUTIVE SUITE</div>
+  <div class="line" style="background:linear-gradient(to bottom, #C8A96E, transparent);"></div>
+  <button class="enter-btn" style="color:#0B1C3A;border-color:rgba(200,169,110,0.4);" onclick="enterApp()">ENTRAR A LA DEMO</button>
+</div>
+
+<!-- MODAL NUEVO EVENTO -->
+<div class="modal-overlay" id="modal-new-event">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Nuevo evento</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>TÍTULO DEL EVENTO</label>
+        <input type="text" id="ev-title-input" placeholder="Ej: Reunión con Dr. Ramírez" />
+      </div>
+      <div class="modal-row">
+        <div class="modal-field">
+          <label>FECHA</label>
+          <input type="date" id="ev-date-input" value="2025-04-23" />
+        </div>
+        <div class="modal-field">
+          <label>HORA</label>
+          <input type="time" id="ev-time-input" value="09:00" />
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>LUGAR</label>
+        <input type="text" id="ev-loc-input" placeholder="Ej: Club Los Leones, Zoom..." />
+      </div>
+      <div class="modal-field">
+        <label>CATEGORÍA</label>
+        <select id="ev-cat-input">
+          <option value="nv">Negocio</option>
+          <option value="gd">Personal</option>
+          <option value="tl">Compromiso</option>
+        </select>
+      </div>
+      <div class="privacy-toggle-row">
+        <div>
+          <div class="privacy-toggle-label">Evento privado</div>
+          <div class="privacy-toggle-sub">Solo visible para usted — el asistente ve "Ocupado"</div>
+        </div>
+        <label class="privacy-switch">
+          <input type="checkbox" id="ev-private-toggle" />
+          <span class="privacy-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-sec" onclick="closeModal()">Cancelar</button>
+      <button class="btn-modal-primary" onclick="createEvent()">Crear evento</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topnav">
+    <div class="topnav-brand">CLARE</div>
+    <div class="topnav-center">
+      <button class="mode-btn active-dark" id="btn-exec" onclick="switchMode('exec')">EJECUTIVO</button>
+      <button class="mode-btn" id="btn-asst" onclick="switchMode('asst')">ASISTENTE</button>
+    </div>
+    <div class="topnav-right">
+      <div class="nav-dot-status"></div>
+      <div class="nav-user">Demo · Alejandro Reyes</div>
+    </div>
+  </div>
+
+  <!-- EXECUTIVE VIEW -->
+  <div class="view active" id="view-exec">
+    <div class="exec-wrap">
+      <div class="exec-sidebar">
+        <div class="exec-sidebar-brand">
+          <div class="exec-sidebar-name">Alejandro Reyes</div>
+          <div class="exec-sidebar-role">SOCIO DIRECTOR</div>
+        </div>
+        <div class="mini-cal-wrap">
+          <div class="mini-cal-head">
+            <div class="mini-cal-month">Abril 2025</div>
+            <div style="display:flex;gap:6px"><span class="mini-cal-nav">‹</span><span class="mini-cal-nav">›</span></div>
+          </div>
+          <div class="mini-grid">
+            <div class="mg-dow">L</div><div class="mg-dow">M</div><div class="mg-dow">M</div><div class="mg-dow">J</div><div class="mg-dow">V</div><div class="mg-dow">S</div><div class="mg-dow">D</div>
+            <div class="mg-d other-d">31</div><div class="mg-d">1</div><div class="mg-d">2</div><div class="mg-d">3</div><div class="mg-d">4</div><div class="mg-d other-d">5</div><div class="mg-d other-d">6</div>
+            <div class="mg-d">7</div><div class="mg-d">8</div><div class="mg-d">9</div><div class="mg-d has">10</div><div class="mg-d">11</div><div class="mg-d other-d">12</div><div class="mg-d other-d">13</div>
+            <div class="mg-d">14</div><div class="mg-d">15</div><div class="mg-d">16</div><div class="mg-d has">17</div><div class="mg-d">18</div><div class="mg-d other-d">19</div><div class="mg-d other-d">20</div>
+            <div class="mg-d has">21</div><div class="mg-d">22</div><div class="mg-d has">23</div><div class="mg-d has">24</div><div class="mg-d">25</div><div class="mg-d other-d">26</div><div class="mg-d other-d">27</div>
+            <div class="mg-d today-d">28</div><div class="mg-d">29</div><div class="mg-d">30</div><div class="mg-d other-d">1</div><div class="mg-d other-d">2</div><div class="mg-d other-d">3</div><div class="mg-d other-d">4</div>
+          </div>
+        </div>
+        <div class="exec-nav">
+          <div class="exec-nav-item active" onclick="showExecPage('briefing')"><div class="end-dot gold"></div><div class="exec-nav-label active">Briefing del día</div></div>
+          <div class="exec-nav-item" onclick="showExecPage('calendar')"><div class="end-dot"></div><div class="exec-nav-label">Calendario</div></div>
+          <div class="exec-nav-item" onclick="showExecPage('invite')"><div class="end-dot"></div><div class="exec-nav-label">Invitación recibida</div></div>
+        </div>
+      </div>
+      <div class="exec-main">
+
+        <!-- BRIEFING -->
+        <div class="exec-page active" id="ep-briefing">
+          <div class="briefing-scroll">
+            <div class="brief-greeting">
+              <div class="brief-date">MIÉRCOLES · 23 DE ABRIL DE 2025</div>
+              <div class="brief-title serif">Buenos días, Alejandro.</div>
+              <div class="brief-sub">Tiene 3 compromisos hoy. Una reunión requiere su atención.</div>
+            </div>
+            <div class="brief-block">
+              <div class="brief-block-label">SU DÍA DE HOY</div>
+              <div class="ag-row"><div class="ag-time-d">09:30</div><div class="ag-body-d"><div class="ag-title-d">Llamada con Banco Security</div><div class="ag-loc-d">30 min · línea privada</div><div class="ag-intel-d"><p>Última reunión hace <span>47 días</span>. Tema pendiente: refinanciamiento crédito hipotecario Torre Vergara.</p></div></div></div>
+              <div class="ag-row"><div class="ag-time-d">13:00</div><div class="ag-body-d"><div class="ag-title-d">Almuerzo con Ricardo Fuentes</div><div class="ag-loc-d">Club Los Leones · mesa privada reservada</div><div class="ag-intel-d"><p>Gerente Edificio Status. Ocupación actual <span>94%</span>. Local B con mora de <span>18 días</span>. Contrato local C vence en <span>62 días</span>.</p></div></div></div>
+              <div class="ag-row"><div class="ag-time-d">17:00</div><div class="ag-body-d"><div class="ag-title-d">Firma escritura Vicuña Mackenna</div><div class="ag-loc-d">Notaría Matta · llevar cédula</div><div class="ag-intel-d"><p>Documentos listos. Abogado AAB confirma <span>sin observaciones</span>.</p></div></div></div>
+            </div>
+            <div class="brief-block">
+              <div class="brief-block-label">INDICADORES DEL PORTAFOLIO</div>
+              <div class="kpi-row">
+                <div class="kpi-c"><div class="kpi-lbl">OCUPACIÓN GLOBAL</div><div class="kpi-val">91%</div><div class="kpi-dl up">↑ +2% vs mes ant.</div></div>
+                <div class="kpi-c"><div class="kpi-lbl">FLUJO NETO ABRIL</div><div class="kpi-val">UF 847</div><div class="kpi-dl neu">— en línea</div></div>
+                <div class="kpi-c"><div class="kpi-lbl">MORAS ACTIVAS</div><div class="kpi-val">2</div><div class="kpi-dl dn">↑ +1 vs mes ant.</div></div>
+                <div class="kpi-c"><div class="kpi-lbl">UF HOY</div><div class="kpi-val">37.842</div><div class="kpi-dl up">↑ +12 pts</div></div>
+                <div class="kpi-c"><div class="kpi-lbl">USD / CLP</div><div class="kpi-val">$924</div><div class="kpi-dl dn">↓ -8 pts</div></div>
+                <div class="kpi-c"><div class="kpi-lbl">CONTRATOS X VENCER</div><div class="kpi-val">3</div><div class="kpi-dl dn">en 90 días</div></div>
+              </div>
+            </div>
+            <div class="brief-block">
+              <div class="brief-block-label">ALERTAS</div>
+              <div class="alert-row"><div class="al-dot red"></div><div class="al-text"><strong>Local B — Edificio Status:</strong> arriendo impago 18 días. Asistente enviará carta el jueves.</div></div>
+              <div class="alert-row"><div class="al-dot gold"></div><div class="al-text"><strong>Seguro póliza automóviles:</strong> vence en 12 días. Pendiente renovación con Mapfre.</div></div>
+              <div class="alert-row"><div class="al-dot teal"></div><div class="al-text"><strong>Dividendo AFE de marzo:</strong> transferido a todos los socios el lunes 21.</div></div>
+            </div>
+            <div class="brief-block">
+              <div class="brief-block-label">CONTEXTO PARA SUS REUNIONES</div>
+              <div class="news-row"><div class="news-src">EL MERCURIO</div><div class="news-txt">Tasas hipotecarias bajan 0.3% en abril — primer descenso en 8 meses según datos del Banco Central.</div></div>
+              <div class="news-row"><div class="news-src">CÁMARA INMOB.</div><div class="news-txt">Vacancia comercial en corredor Providencia–Las Condes cae a 7.2%, mínimo histórico del trimestre.</div></div>
+              <div class="news-row"><div class="news-src">BLOOMBERG</div><div class="news-txt">Peso chileno se aprecia frente al dólar por tercer día consecutivo ante mejora en precio del cobre.</div></div>
+            </div>
+            <button class="btn-new-event" onclick="openModal()">+ Agregar evento al calendario</button>
+          </div>
+        </div>
+
+        <!-- CALENDAR DARK -->
+        <div class="exec-page" id="ep-calendar">
+          <div class="cal-dark-header">
+            <div class="cal-dark-title">Semana del 21 al 27 de abril</div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div class="cal-dark-tabs"><div class="cal-tab">Día</div><div class="cal-tab active">Semana</div><div class="cal-tab">Mes</div></div>
+              <button style="background:var(--gold);color:var(--navy-deep);border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:500;cursor:pointer;" onclick="openModal()">+ Nuevo</button>
+            </div>
+          </div>
+          <div class="cal-dark-body">
+            <div class="dow-strip-dark">
+              <div class="dow-cell-dark"></div>
+              <div class="dow-cell-dark"><div class="dow-lbl-dark">LUN</div><div class="dow-num-dark">21</div></div>
+              <div class="dow-cell-dark"><div class="dow-lbl-dark">MAR</div><div class="dow-num-dark">22</div></div>
+              <div class="dow-cell-dark"><div class="dow-lbl-dark">MIÉ</div><div class="dow-num-dark">23</div></div>
+              <div class="dow-cell-dark"><div class="dow-lbl-dark">JUE</div><div class="dow-num-dark">24</div></div>
+              <div class="dow-cell-dark"><div class="dow-lbl-dark">VIE</div><div class="dow-num-dark">25</div></div>
+              <div class="dow-cell-dark"><div class="dow-lbl-dark">SÁB</div><div class="dow-num-dark tod">26</div></div>
+              <div class="dow-cell-dark"><div class="dow-lbl-dark">DOM</div><div class="dow-num-dark">27</div></div>
+            </div>
+            <div class="grid-dark" id="cal-dark-grid">
+              <div class="time-col-dark">
+                <div class="ts">08:00</div><div class="ts">09:00</div><div class="ts">10:00</div><div class="ts">11:00</div>
+                <div class="ts">12:00</div><div class="ts">13:00</div><div class="ts">14:00</div><div class="ts">15:00</div>
+                <div class="ts">16:00</div><div class="ts">17:00</div>
+              </div>
+              <div class="dcol" id="exec-col-lun" style="position:relative">
+                <div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div>
+                <div class="ev-dark ev-nv" style="top:52px;height:90px"><div class="et">Directorio mensual</div><div class="es">Sala A</div></div>
+                <div class="ev-dark ev-tl" style="top:340px;height:44px"><div class="et">Santiago Capital</div><div class="es">Zoom · 15:30</div></div>
+              </div>
+              <div class="dcol" style="position:relative"><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div></div>
+              <div class="dcol" id="exec-col-mie" style="position:relative">
+                <div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div>
+                <div class="ev-dark ev-gd" style="top:244px;height:70px"><div class="et">Almuerzo Q2</div><div class="es">Club Los Leones</div></div>
+                <div class="ev-dark ev-nv" style="top:436px;height:44px"><div class="et">Firma Edificio Status</div><div class="es">Notaría Matta</div></div>
+              </div>
+              <div class="dcol" id="exec-col-jue" style="position:relative">
+                <div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div>
+                <div class="ev-dark ev-pn" style="top:244px;height:56px"><div class="et">Almuerzo F. Soto</div><div class="es">por confirmar</div></div>
+              </div>
+              <div class="dcol" style="position:relative">
+                <div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div>
+                <div class="ev-dark ev-tl" style="top:148px;height:44px"><div class="et">Conf. inversores</div><div class="es">Zoom · 10:00</div></div>
+              </div>
+              <div class="dcol wknd" style="position:relative"><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div></div>
+              <div class="dcol wknd" style="position:relative"><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div><div class="ds"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INVITE -->
+        <div class="exec-page" id="ep-invite">
+          <div class="invite-wrap">
+            <div class="invite-card">
+              <div class="inv-top">
+                <div class="inv-brand">CLARE · INVITACIÓN PRIVADA</div>
+                <div class="inv-avatar-row"><div class="inv-avatar">AR</div><div><div class="inv-sender">Alejandro Reyes</div><div class="inv-sender-role">Socio Director · Reyes &amp; Asociados</div></div></div>
+              </div>
+              <div class="inv-body">
+                <div class="inv-label">INVITACIÓN A REUNIÓN</div>
+                <div class="inv-title serif">Revisión de cartera Q2 — Almuerzo de trabajo</div>
+                <div class="inv-meta"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="#C8A96E" stroke-width="0.8"/><path d="M5 2v2M11 2v2M2 7h12" stroke="#C8A96E" stroke-width="0.8" stroke-linecap="round"/></svg><div class="inv-meta-txt"><strong>Miércoles 23 de abril, 2025</strong><br>13:00 — 14:30 hrs</div></div>
+                <div class="inv-meta"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5C5.5 1.5 3.5 3.5 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.5-2-4.5-4.5-4.5z" stroke="#C8A96E" stroke-width="0.8"/><circle cx="8" cy="6" r="1.5" stroke="#C8A96E" stroke-width="0.8"/></svg><div class="inv-meta-txt"><strong>Club de Golf Los Leones</strong><br>Vitacura, Santiago</div></div>
+                <div class="inv-divider"></div>
+                <div class="inv-note-lbl">NOTA PERSONAL</div>
+                <div class="inv-note">"Reservé mesa privada. Quedo atento a su confirmación."</div>
+              </div>
+              <div class="inv-actions">
+                <button class="inv-btn-accept" onclick="showToast('Asistencia confirmada — su asistente ha sido notificada')">Confirmar asistencia</button>
+                <div class="inv-btn-row">
+                  <button class="inv-btn-sec" onclick="showToast('Invitación declinada')">Declinar</button>
+                  <button class="inv-btn-sec" onclick="showToast('Se abrirá el selector de horarios')">Proponer otro horario</button>
+                </div>
+              </div>
+              <div class="inv-footer"><div class="inv-footer-txt">CLARE · PRIVATE</div><div class="inv-footer-txt">Sin publicidad · Sin datos compartidos</div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ASSISTANT VIEW -->
+  <div class="view" id="view-asst">
+    <div class="asst-wrap">
+      <div class="asst-sidebar">
+        <div class="asst-sidebar-brand"><div class="asst-brand-name">Clare</div><div class="asst-brand-sub">PANEL ASISTENTE</div></div>
+        <div class="asst-execs">
+          <div class="asst-execs-lbl">EJECUTIVOS</div>
+          <div class="asst-exec-row"><div class="asst-exec-av av1 on">AR</div><div class="asst-exec-name on">A. Reyes</div></div>
+          <div class="asst-exec-row"><div class="asst-exec-av av2">PM</div><div class="asst-exec-name">P. Morales</div></div>
+          <div class="asst-exec-row"><div class="asst-exec-av av3">JV</div><div class="asst-exec-name">J. Vargas</div></div>
+        </div>
+        <div class="asst-nav">
+          <div class="asst-nav-item active" onclick="showAsstPage('panel')"><div class="asst-nav-dot gold"></div><div class="asst-nav-lbl active">Panel</div></div>
+          <div class="asst-nav-item" onclick="showAsstPage('calendar')"><div class="asst-nav-dot"></div><div class="asst-nav-lbl">Calendario</div></div>
+          <div class="asst-nav-item" onclick="showAsstPage('contacts')"><div class="asst-nav-dot"></div><div class="asst-nav-lbl">Contactos</div></div>
+          <div class="asst-nav-item" onclick="showAsstPage('pendientes')"><div class="asst-nav-dot"></div><div class="asst-nav-lbl">Pendientes</div></div>
+          <div class="asst-nav-item" onclick="showAsstPage('integraciones')"><div class="asst-nav-dot"></div><div class="asst-nav-lbl">Integraciones</div></div>
+        </div>
+      </div>
+
+      <div class="asst-main">
+
+        <!-- PANEL -->
+        <div class="asst-page active" id="ap-panel">
+          <div class="asst-panel-scroll">
+            <div class="asst-top-row">
+              <div><div class="asst-page-title">Alejandro Reyes</div><div class="asst-date-lbl">Semana del 21 al 25 de abril · 2025</div></div>
+              <button class="btn-new-light" onclick="openModal()">+ Nueva reunión</button>
+            </div>
+            <div class="voice-strip">
+              <div class="voice-ic"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="5" y="1" width="6" height="9" rx="3" stroke="#9A7B3A" stroke-width="0.9"/><path d="M2.5 8.5A5.5 5.5 0 0 0 8 14a5.5 5.5 0 0 0 5.5-5.5" stroke="#9A7B3A" stroke-width="0.9" stroke-linecap="round"/><line x1="8" y1="14" x2="8" y2="15.5" stroke="#9A7B3A" stroke-width="0.9" stroke-linecap="round"/></svg></div>
+              <div class="voice-txt">"Agenda el almuerzo con <strong>Felipe Soto</strong> para el jueves, que sea en Las Condes, no antes de las 13 hrs"</div>
+              <div class="voice-age">hace 2 min</div>
+            </div>
+            <div class="asst-day-cols" id="asst-day-cols">
+              <div>
+                <div class="asst-col-head">Lunes <span>21</span></div>
+                <div class="asst-ev dim-ev"><div class="asst-ev-time">09:00</div><div class="asst-ev-title">Directorio mensual</div><div class="asst-ev-sub">Sala A · 2 hrs</div><span class="asst-badge conf">Confirmado</span></div>
+                <div class="asst-ev"><div class="asst-ev-time">15:30</div><div class="asst-ev-title">Llamada Santiago Capital</div><div class="asst-ev-sub">Zoom · 45 min</div><span class="asst-badge conf">Confirmado</span></div>
+              </div>
+              <div>
+                <div class="asst-col-head">Miércoles <span>23</span></div>
+                <div class="asst-ev gold-ev"><div class="asst-ev-time">13:00</div><div class="asst-ev-title">Almuerzo Revisión Q2</div><div class="asst-ev-sub">Club Los Leones</div><span class="asst-badge pend">Esperando resp.</span></div>
+                <div class="asst-ev"><div class="asst-ev-time">17:00</div><div class="asst-ev-title">Firma Edificio Status</div><div class="asst-ev-sub">Notaría Matta</div><span class="asst-badge conf">Confirmado</span></div>
+              </div>
+              <div id="col-jue">
+                <div class="asst-col-head">Jueves <span>24</span></div>
+                <div class="asst-ev gold-ev"><div class="asst-ev-time">13:00 — por conf.</div><div class="asst-ev-title">Almuerzo F. Soto</div><div class="asst-ev-sub">Las Condes</div><span class="asst-badge voice-b">Creado por voz</span></div>
+              </div>
+            </div>
+
+            <div class="inbox-lbl">PENDIENTES DE RESPUESTA</div>
+            <div class="inbox-row"><div class="in-dot g"></div><div class="in-txt"><strong>Carlos Mendoza</strong> propuso 3 horarios para reunión del viernes</div><div class="in-time">10:14</div><button class="in-btn" onclick="showToast('Abriendo opciones de horario...')">Ver</button></div>
+            <div class="inbox-row"><div class="in-dot g"></div><div class="in-txt"><strong>Inversiones del Sur</strong> solicitó reagendar el jueves 17</div><div class="in-time">ayer</div><button class="in-btn" onclick="showToast('Abriendo solicitud de reagendamiento...')">Ver</button></div>
+            <div class="inbox-row"><div class="in-dot n"></div><div class="in-txt"><strong>Dr. Fontaine</strong> confirmó asistencia al evento del 30</div><div class="in-time">ayer</div></div>
+
+            <div style="height:1px;background:var(--stone);margin:20px 0"></div>
+
+            <div class="inbox-lbl" style="margin-bottom:12px">INDICADORES DEL PORTAFOLIO — CONFIGURACIÓN</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+              <div class="cfg-kpi-card active-kpi"><div class="cfg-kpi-top"><div class="cfg-kpi-lbl">Ocupación global</div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div><div class="cfg-kpi-src">Fuente: Rent Roll · auto</div></div>
+              <div class="cfg-kpi-card active-kpi"><div class="cfg-kpi-top"><div class="cfg-kpi-lbl">Flujo neto mensual</div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div><div class="cfg-kpi-src">Fuente: Flujo de Caja</div></div>
+              <div class="cfg-kpi-card active-kpi"><div class="cfg-kpi-top"><div class="cfg-kpi-lbl">Moras activas</div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div><div class="cfg-kpi-src">Fuente: Pagos · manual</div></div>
+              <div class="cfg-kpi-card active-kpi"><div class="cfg-kpi-top"><div class="cfg-kpi-lbl">UF del día</div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div><div class="cfg-kpi-src">Fuente: SII · automático</div></div>
+              <div class="cfg-kpi-card active-kpi"><div class="cfg-kpi-top"><div class="cfg-kpi-lbl">USD / CLP</div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div><div class="cfg-kpi-src">Fuente: Banco Central</div></div>
+              <div class="cfg-kpi-card"><div class="cfg-kpi-top"><div class="cfg-kpi-lbl">Fondos mutuos</div><div class="cfg-toggle" onclick="toggleKpi(this)"></div></div><div class="cfg-kpi-src">Fuente: Banchile · inactivo</div></div>
+            </div>
+            <button class="cfg-add-btn" onclick="showToast('Agregar indicador personalizado...')">+ Agregar indicador personalizado</button>
+
+            <div style="height:1px;background:var(--stone);margin:20px 0"></div>
+
+            <div class="inbox-lbl" style="margin-bottom:12px">ALERTAS AUTOMÁTICAS — CONFIGURACIÓN</div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
+              <div class="cfg-alert-row"><div class="cfg-alert-dot" style="background:#F09595"></div><div class="cfg-alert-body"><div class="cfg-alert-title">Mora de arriendo</div><div class="cfg-alert-sub">Alertar cuando supere <span class="cfg-val" onclick="editVal(this)">15</span> días</div></div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div>
+              <div class="cfg-alert-row"><div class="cfg-alert-dot" style="background:#C8A96E"></div><div class="cfg-alert-body"><div class="cfg-alert-title">Vencimiento de contratos</div><div class="cfg-alert-sub">Alertar con <span class="cfg-val" onclick="editVal(this)">90</span> días de anticipación</div></div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div>
+              <div class="cfg-alert-row"><div class="cfg-alert-dot" style="background:#C8A96E"></div><div class="cfg-alert-body"><div class="cfg-alert-title">Vencimiento de seguros</div><div class="cfg-alert-sub">Alertar con <span class="cfg-val" onclick="editVal(this)">30</span> días de anticipación</div></div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div>
+              <div class="cfg-alert-row"><div class="cfg-alert-dot" style="background:#5DCAA5"></div><div class="cfg-alert-body"><div class="cfg-alert-title">Dividendos transferidos</div><div class="cfg-alert-sub">Notificar al ejecutivo al confirmar</div></div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div>
+              <div class="cfg-alert-row"><div class="cfg-alert-dot" style="background:#B0ADA5"></div><div class="cfg-alert-body"><div class="cfg-alert-title">Vacancia nueva</div><div class="cfg-alert-sub">Alertar cuando un local quede sin arrendar</div></div><div class="cfg-toggle" onclick="toggleKpi(this)"></div></div>
+            </div>
+            <button class="cfg-add-btn" onclick="showToast('Agregar alerta personalizada...')">+ Agregar alerta personalizada</button>
+
+            <div style="height:1px;background:var(--stone);margin:20px 0"></div>
+
+            <div class="inbox-lbl" style="margin-bottom:12px">CONTEXTO E INTELIGENCIA — FUENTES</div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:24px">
+              <div class="cfg-alert-row"><div style="width:8px;height:8px;border-radius:2px;background:#0B1C3A;flex-shrink:0;margin-top:3px"></div><div class="cfg-alert-body"><div class="cfg-alert-title">Noticias inmobiliarias Chile</div><div class="cfg-alert-sub">El Mercurio · Cámara Inmobiliaria · CBRE</div></div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div>
+              <div class="cfg-alert-row"><div style="width:8px;height:8px;border-radius:2px;background:#0B1C3A;flex-shrink:0;margin-top:3px"></div><div class="cfg-alert-body"><div class="cfg-alert-title">Indicadores económicos</div><div class="cfg-alert-sub">Banco Central · Bloomberg · Reuters</div></div><div class="cfg-toggle on" onclick="toggleKpi(this)"></div></div>
+              <div class="cfg-alert-row"><div style="width:8px;height:8px;border-radius:2px;background:#B0ADA5;flex-shrink:0;margin-top:3px"></div><div class="cfg-alert-body"><div class="cfg-alert-title">Noticias de contactos clave</div><div class="cfg-alert-sub">Buscar noticias sobre personas en agenda</div></div><div class="cfg-toggle" onclick="toggleKpi(this)"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CALENDAR LIGHT -->
+        <div class="asst-page" id="ap-calendar">
+          <div class="cal-light-header">
+            <div class="cal-light-title">Semana del 21 al 27 de abril</div>
+            <div style="display:flex;gap:4px"><div class="cal-tab-l">Día</div><div class="cal-tab-l active">Semana</div><div class="cal-tab-l">Mes</div></div>
+            <button class="btn-new-light" onclick="openModal()">+ Nuevo</button>
+          </div>
+          <div class="dow-strip-light">
+            <div class="dow-cell-l"></div>
+            <div class="dow-cell-l"><div class="dow-lbl-l">LUN</div><div class="dow-num-l">21</div></div>
+            <div class="dow-cell-l"><div class="dow-lbl-l">MAR</div><div class="dow-num-l">22</div></div>
+            <div class="dow-cell-l"><div class="dow-lbl-l">MIÉ</div><div class="dow-num-l">23</div></div>
+            <div class="dow-cell-l"><div class="dow-lbl-l">JUE</div><div class="dow-num-l">24</div></div>
+            <div class="dow-cell-l"><div class="dow-lbl-l">VIE</div><div class="dow-num-l">25</div></div>
+            <div class="dow-cell-l"><div class="dow-lbl-l">SÁB</div><div class="dow-num-l tod">26</div></div>
+            <div class="dow-cell-l"><div class="dow-lbl-l">DOM</div><div class="dow-num-l">27</div></div>
+          </div>
+          <div class="grid-light">
+            <div style="background:var(--cream)">
+              <div class="tsl">08:00</div><div class="tsl">09:00</div><div class="tsl">10:00</div><div class="tsl">11:00</div>
+              <div class="tsl">12:00</div><div class="tsl">13:00</div><div class="tsl">14:00</div><div class="tsl">15:00</div>
+              <div class="tsl">16:00</div><div class="tsl">17:00</div>
+            </div>
+            <div class="dcol-l" style="position:relative">
+              <div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div>
+              <div class="ev-light ev-l-nv" style="top:52px;height:90px"><div class="et">Directorio mensual</div><div class="es">Sala A</div></div>
+              <div class="ev-light ev-l-tl" style="top:340px;height:44px"><div class="et">Santiago Capital</div><div class="es">Zoom · 15:30</div></div>
+            </div>
+            <div class="dcol-l" style="position:relative"><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div></div>
+            <div class="dcol-l" style="position:relative">
+              <div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div>
+              <div class="ev-light ev-l-gd" style="top:244px;height:70px"><div class="et">Almuerzo Q2 · Reyes</div><div class="es">Club Los Leones</div></div>
+              <div class="ev-light ev-l-nv" style="top:436px;height:44px"><div class="et">Firma Edificio Status</div><div class="es">Notaría Matta</div></div>
+            </div>
+            <div class="dcol-l" id="asst-col-jue" style="position:relative">
+              <div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div>
+              <div class="ev-light ev-l-pn" style="top:244px;height:56px"><div class="et">Almuerzo F. Soto</div><div class="es">Las Condes · por conf.</div></div>
+            </div>
+            <div class="dcol-l" style="position:relative">
+              <div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div>
+              <div class="ev-light ev-l-tl" style="top:148px;height:44px"><div class="et">Conf. inversores</div><div class="es">Zoom · 10:00</div></div>
+            </div>
+            <div class="dcol-l wknd-l" style="position:relative"><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div></div>
+            <div class="dcol-l wknd-l" style="position:relative"><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div><div class="dsl"></div></div>
+          </div>
+        </div>
+
+        <!-- CONTACTS -->
+        <div class="asst-page" id="ap-contacts">
+          <div class="asst-panel-scroll">
+            <div class="asst-top-row">
+              <div><div class="asst-page-title">Contactos VIP</div><div class="asst-date-lbl">Directorio privado de Alejandro Reyes</div></div>
+              <button class="btn-new-light" onclick="showToast('Agregar nuevo contacto...')">+ Nuevo contacto</button>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+              <button style="font-size:11px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--stone);background:var(--navy);color:var(--gold);cursor:pointer;">Todos</button>
+              <button style="font-size:11px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--stone);background:transparent;color:var(--dim);cursor:pointer;">Negocios</button>
+              <button style="font-size:11px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--stone);background:transparent;color:var(--dim);cursor:pointer;">Personales</button>
+              <button style="font-size:11px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--stone);background:transparent;color:var(--dim);cursor:pointer;">Institucional</button>
+            </div>
+            <div class="contact-grid">
+              <div class="contact-card"><div class="contact-av" style="background:#EAF0F8;color:#1A3A6B;">RF</div><div class="contact-body"><div class="contact-name">Ricardo Fuentes</div><div class="contact-role">Gerente · Edificio Status</div></div><div class="contact-meta"><div class="contact-last">Última reunión: 23 abr</div><span class="contact-tag vip">VIP</span></div></div>
+              <div class="contact-card"><div class="contact-av" style="background:#E8F5EF;color:#0F6E56;">CM</div><div class="contact-body"><div class="contact-name">Carlos Mendoza</div><div class="contact-role">Director · Santiago Capital</div></div><div class="contact-meta"><div class="contact-last">Última reunión: 18 abr</div><span class="contact-tag biz">Negocios</span></div></div>
+              <div class="contact-card"><div class="contact-av" style="background:#FDF3E0;color:#9A7B3A;">FS</div><div class="contact-body"><div class="contact-name">Felipe Soto</div><div class="contact-role">Socio · Inversiones del Sur</div></div><div class="contact-meta"><div class="contact-last">Reunión agendada: 24 abr</div><span class="contact-tag biz">Negocios</span></div></div>
+              <div class="contact-card"><div class="contact-av" style="background:#F5F4F0;color:#888780;">Dr.F</div><div class="contact-body"><div class="contact-name">Dr. Fontaine</div><div class="contact-role">Médico personal</div></div><div class="contact-meta"><div class="contact-last">Evento: 30 abr</div><span class="contact-tag vip">VIP</span></div></div>
+              <div class="contact-card"><div class="contact-av" style="background:#EAF0F8;color:#1A3A6B;">AAB</div><div class="contact-body"><div class="contact-name">Alberto A. Bravo</div><div class="contact-role">Abogado · Estudio AAB</div></div><div class="contact-meta"><div class="contact-last">Escritura: 23 abr</div><span class="contact-tag biz">Legal</span></div></div>
+              <div class="contact-card"><div class="contact-av" style="background:#EEEDFE;color:#534AB7;">IS</div><div class="contact-body"><div class="contact-name">Inversiones del Sur</div><div class="contact-role">Empresa · Fondo inmobiliario</div></div><div class="contact-meta"><div class="contact-last">Solicitud: reagendar</div><span class="contact-tag biz">Negocios</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PENDIENTES -->
+        <div class="asst-page" id="ap-pendientes">
+          <div class="asst-panel-scroll">
+            <div class="asst-top-row">
+              <div><div class="asst-page-title">Pendientes</div><div class="asst-date-lbl">Tareas y compromisos de seguimiento</div></div>
+              <button class="btn-new-light" onclick="showToast('Agregar tarea pendiente...')">+ Nueva tarea</button>
+            </div>
+            <div class="pend-section">
+              <div class="pend-section-label">URGENTE — HOY</div>
+              <div class="pend-item urgent" onclick="togglePend(this)"><div class="pend-check"></div><div class="pend-body"><div class="pend-title">Confirmar mesa privada Club Los Leones para almuerzo 13:00</div><div class="pend-sub">Antes de las 10:00 hrs</div></div><div class="pend-date">hoy</div></div>
+              <div class="pend-item urgent" onclick="togglePend(this)"><div class="pend-check"></div><div class="pend-body"><div class="pend-title">Preparar documentos notaría Matta — escritura 17:00</div><div class="pend-sub">Llevar cédula identidad + poder notarial</div></div><div class="pend-date">hoy</div></div>
+            </div>
+            <div class="pend-section">
+              <div class="pend-section-label">ESTA SEMANA</div>
+              <div class="pend-item normal" onclick="togglePend(this)"><div class="pend-check"></div><div class="pend-body"><div class="pend-title">Enviar carta de mora a arrendatario Local B — Edificio Status</div><div class="pend-sub">Mora de 18 días. Coordinado con Abogado AAB.</div></div><div class="pend-date">jue 24</div></div>
+              <div class="pend-item normal" onclick="togglePend(this)"><div class="pend-check"></div><div class="pend-body"><div class="pend-title">Contactar Mapfre para renovación póliza automóviles</div><div class="pend-sub">Vence en 12 días</div></div><div class="pend-date">vie 25</div></div>
+              <div class="pend-item normal" onclick="togglePend(this)"><div class="pend-check"></div><div class="pend-body"><div class="pend-title">Confirmar horario almuerzo Felipe Soto — Las Condes</div><div class="pend-sub">Creado por instrucción de voz. Sin confirmar aún.</div></div><div class="pend-date">jue 24</div></div>
+            </div>
+            <div class="pend-section">
+              <div class="pend-section-label">PRÓXIMAS SEMANAS</div>
+              <div class="pend-item normal" onclick="togglePend(this)"><div class="pend-check"></div><div class="pend-body"><div class="pend-title">Gestionar renovación contrato Local C — vence en 62 días</div><div class="pend-sub">Edificio Status · Coordinar con Ricardo Fuentes</div></div><div class="pend-date">may 15</div></div>
+              <div class="pend-item normal" onclick="togglePend(this)"><div class="pend-check"></div><div class="pend-body"><div class="pend-title">Preparar informe Q2 portafolio inmobiliario</div><div class="pend-sub">Para reunión con socios AFE</div></div><div class="pend-date">may 30</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INTEGRACIONES -->
+        <div class="asst-page" id="ap-integraciones">
+          <div class="asst-panel-scroll">
+            <div class="asst-top-row">
+              <div><div class="asst-page-title">Integraciones</div><div class="asst-date-lbl">Conecta las fuentes de datos de Alejandro Reyes</div></div>
+            </div>
+
+            <div class="inbox-lbl" style="margin-bottom:12px">COMUNICACIÓN</div>
+            <div class="integ-grid">
+              <div class="integ-card connected" onclick="showToast('Gmail conectado · última sincronización hace 4 min')"><div class="integ-icon" style="background:#FEF0F0;font-size:18px;">✉</div><div class="integ-body"><div class="integ-name">Gmail</div><div class="integ-desc">Lectura de correos relevantes al negocio</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card" onclick="showToast('Conectar Outlook...')"><div class="integ-icon" style="background:#EEF4FE;font-size:18px;">📧</div><div class="integ-body"><div class="integ-name">Outlook</div><div class="integ-desc">Correo y calendario Microsoft</div></div><span class="integ-status off">Conectar</span></div>
+              <div class="integ-card connected" onclick="showToast('Slack conectado · canal #ejecutivos activo')"><div class="integ-icon" style="background:#F5F0FE;font-size:18px;">💬</div><div class="integ-body"><div class="integ-name">Slack</div><div class="integ-desc">Monitoreo de canales seleccionados</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card" onclick="showToast('Conectar WhatsApp Business...')"><div class="integ-icon" style="background:#EEFAF4;font-size:18px;">📱</div><div class="integ-body"><div class="integ-name">WhatsApp Business</div><div class="integ-desc">Mensajes de contactos VIP</div></div><span class="integ-status off">Conectar</span></div>
+            </div>
+
+            <div class="inbox-lbl" style="margin-bottom:12px;margin-top:4px">CALENDARIO Y DOCUMENTOS</div>
+            <div class="integ-grid">
+              <div class="integ-card connected" onclick="showToast('Google Calendar sincronizado')"><div class="integ-icon" style="background:#FEF8EE;font-size:18px;">📅</div><div class="integ-body"><div class="integ-name">Google Calendar</div><div class="integ-desc">Sincronización bidireccional</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card" onclick="showToast('Conectar Google Drive...')"><div class="integ-icon" style="background:#FEF8EE;font-size:18px;">📁</div><div class="integ-body"><div class="integ-name">Google Drive</div><div class="integ-desc">Documentos adjuntos a eventos</div></div><span class="integ-status off">Conectar</span></div>
+              <div class="integ-card" onclick="showToast('Conectar OneDrive...')"><div class="integ-icon" style="background:#EEF4FE;font-size:18px;">☁</div><div class="integ-body"><div class="integ-name">OneDrive</div><div class="integ-desc">Archivos Microsoft</div></div><span class="integ-status off">Conectar</span></div>
+              <div class="integ-card connected" onclick="showToast('Zoom conectado · generación automática de links activa')"><div class="integ-icon" style="background:#EEF4FE;font-size:18px;">🎥</div><div class="integ-body"><div class="integ-name">Zoom</div><div class="integ-desc">Links automáticos en eventos</div></div><span class="integ-status on">Activo</span></div>
+            </div>
+
+            <div class="inbox-lbl" style="margin-bottom:12px;margin-top:4px">DATOS DEL NEGOCIO</div>
+            <div class="integ-grid">
+              <div class="integ-card connected" onclick="showToast('Excel sincronizado · último archivo: Rent Roll abril 2025')"><div class="integ-icon" style="background:#EEFAF4;font-size:18px;">📊</div><div class="integ-body"><div class="integ-name">Excel / CSV</div><div class="integ-desc">KPIs del portafolio inmobiliario</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card connected" onclick="showToast('Banco Central conectado · UF y dólar actualizados automáticamente')"><div class="integ-icon" style="background:#EAF0F8;font-size:18px;">🏛</div><div class="integ-body"><div class="integ-name">Banco Central Chile</div><div class="integ-desc">UF, dólar, IPC en tiempo real</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card" onclick="showToast('Conectar Banchile...')"><div class="integ-icon" style="background:#FDF3E0;font-size:18px;">💰</div><div class="integ-body"><div class="integ-name">Banchile</div><div class="integ-desc">Fondos mutuos e inversiones</div></div><span class="integ-status off">Conectar</span></div>
+              <div class="integ-card" onclick="showToast('Conectar vía Zapier o Make...')"><div class="integ-icon" style="background:#F5F4F0;font-size:18px;">⚡</div><div class="integ-body"><div class="integ-name">Zapier / Make</div><div class="integ-desc">Conecta cualquier sistema propio</div></div><span class="integ-status off">Conectar</span></div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="view-footer">
+    <div class="vf-brand">CLARE · PRIVATE CALENDAR · DEMO v0.2</div>
+    <div class="vf-privacy">Sin publicidad · Sin datos compartidos · Cifrado AES-256</div>
+  </div>
+</div>
+
+<script>
+function enterApp() {
+  document.getElementById('splash').classList.add('hidden');
+  setTimeout(() => { document.getElementById('app').classList.add('visible'); }, 400);
+}
+
+function switchMode(mode) {
+  document.getElementById('view-exec').classList.remove('active');
+  document.getElementById('view-asst').classList.remove('active');
+  document.getElementById('btn-exec').classList.remove('active-dark','active-light');
+  document.getElementById('btn-asst').classList.remove('active-dark','active-light');
+  if (mode === 'exec') {
+    document.getElementById('view-exec').classList.add('active');
+    document.getElementById('btn-exec').classList.add('active-dark');
+  } else {
+    document.getElementById('view-asst').classList.add('active');
+    document.getElementById('btn-asst').classList.add('active-light');
+  }
+}
+
+function showExecPage(page) {
+  document.querySelectorAll('.exec-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.exec-nav-item').forEach(n => {
+    n.classList.remove('active');
+    n.querySelector('.end-dot').classList.remove('gold');
+    n.querySelector('.exec-nav-label').classList.remove('active');
+  });
+  document.getElementById('ep-' + page).classList.add('active');
+  const items = document.querySelectorAll('.exec-nav-item');
+  const map = { briefing: 0, calendar: 1, invite: 2 };
+  const i = items[map[page]];
+  if (i) { i.classList.add('active'); i.querySelector('.end-dot').classList.add('gold'); i.querySelector('.exec-nav-label').classList.add('active'); }
+}
+
+function showAsstPage(page) {
+  document.querySelectorAll('.asst-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.asst-nav-item').forEach(n => {
+    n.classList.remove('active');
+    n.querySelector('.asst-nav-dot').classList.remove('gold');
+    n.querySelector('.asst-nav-lbl').classList.remove('active');
+  });
+  document.getElementById('ap-' + page).classList.add('active');
+  const items = document.querySelectorAll('.asst-nav-item');
+  const map = { panel: 0, calendar: 1, contacts: 2, pendientes: 3, integraciones: 4 };
+  const i = items[map[page]];
+  if (i) { i.classList.add('active'); i.querySelector('.asst-nav-dot').classList.add('gold'); i.querySelector('.asst-nav-lbl').classList.add('active'); }
+}
+
+function openModal() {
+  document.getElementById('modal-new-event').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modal-new-event').classList.remove('active');
+}
+
+function createEvent() {
+  const title = document.getElementById('ev-title-input').value || 'Nuevo evento';
+  const time = document.getElementById('ev-time-input').value || '09:00';
+  const loc = document.getElementById('ev-loc-input').value || '';
+  const isPrivate = document.getElementById('ev-private-toggle').checked;
+
+  closeModal();
+
+  // Add to assistant panel col-jue
+  const col = document.getElementById('col-jue');
+  if (col) {
+    const ev = document.createElement('div');
+    ev.className = 'asst-ev ' + (isPrivate ? 'priv-ev' : 'gold-ev');
+    ev.innerHTML = `<div class="asst-ev-time">${time}</div>
+      <div class="asst-ev-title">${title}</div>
+      <div class="asst-ev-sub">${loc || 'Sin ubicación'}</div>
+      <span class="asst-badge ${isPrivate ? 'priv-b' : 'new-b'}">${isPrivate ? 'Privado' : 'Nuevo'}</span>`;
+    col.appendChild(ev);
+  }
+
+  // Add to dark calendar
+  const dcol = document.getElementById('exec-col-jue');
+  if (dcol) {
+    const topMap = { '08': 4, '09': 52, '10': 100, '11': 148, '12': 196, '13': 244, '14': 292, '15': 340, '16': 388, '17': 436 };
+    const hour = time.split(':')[0];
+    const top = topMap[hour] || 52;
+    const ev = document.createElement('div');
+    ev.className = 'ev-dark ' + (isPrivate ? 'ev-priv' : 'ev-gd');
+    ev.style.cssText = `top:${top}px;height:44px;`;
+    ev.innerHTML = `<div class="et">${isPrivate ? '🔒 ' + title : title}</div><div class="es">${loc || time}</div>`;
+    dcol.appendChild(ev);
+  }
+
+  showToast(isPrivate ? `Evento privado creado — asistente ve "Ocupado"` : `Evento creado y visible para su asistente`);
+}
+
+function toggleKpi(el) {
+  el.classList.toggle('on');
+  const card = el.closest('.cfg-kpi-card');
+  if (card) card.classList.toggle('active-kpi', el.classList.contains('on'));
+}
+
+function editVal(el) {
+  const cur = el.textContent;
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.value = cur;
+  input.style.cssText = 'width:40px;font-size:11px;color:#9A7B3A;font-weight:500;border:none;border-bottom:1px solid #C8A96E;background:transparent;text-align:center;outline:none;padding:0 2px;';
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  input.onblur = () => {
+    const span = document.createElement('span');
+    span.className = 'cfg-val';
+    span.textContent = input.value || cur;
+    span.onclick = function() { editVal(this); };
+    input.replaceWith(span);
+  };
+  input.onkeydown = e => { if (e.key === 'Enter') input.blur(); };
+}
+
+function togglePend(el) {
+  const check = el.querySelector('.pend-check');
+  check.classList.toggle('checked');
+  el.classList.toggle('done');
+  if (check.classList.contains('checked')) showToast('Tarea marcada como completada');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+document.getElementById('modal-new-event').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
