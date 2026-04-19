@@ -456,9 +456,9 @@ body { background: #161F2C; font-family: 'DM Sans', sans-serif; min-height: 100v
   cursor: pointer;
   transition: opacity 0.2s;
 }
-.mobile-tab.active .mobile-tab-icon { color: #C8A96E; }
+.mobile-tab.active .mobile-tab-svg { color: #C8A96E; }
 .mobile-tab.active .mobile-tab-label { color: #C8A96E; }
-.mobile-tab-icon { font-size: 18px; color: rgba(143,171,196,0.4); line-height: 1; }
+.mobile-tab-svg { color: rgba(143,171,196,0.35); }
 .mobile-tab-label { font-size: 9px; letter-spacing: 0.08em; color: rgba(143,171,196,0.4); }
 
 /* Asst mobile tabs */
@@ -486,9 +486,9 @@ body { background: #161F2C; font-family: 'DM Sans', sans-serif; min-height: 100v
   gap: 3px;
   cursor: pointer;
 }
-.asst-mobile-tab.active .asst-tab-icon { color: #9A7B3A; }
+.asst-mobile-tab.active .asst-tab-svg { color: #9A7B3A; }
 .asst-mobile-tab.active .asst-tab-label { color: #9A7B3A; }
-.asst-tab-icon { font-size: 18px; color: #B0ADA5; line-height: 1; }
+.asst-tab-svg { color: #C0BDB5; }
 .asst-tab-label { font-size: 9px; letter-spacing: 0.06em; color: #B0ADA5; }
 
 </style>
@@ -508,7 +508,13 @@ body { background: #161F2C; font-family: 'DM Sans', sans-serif; min-height: 100v
   <div class="modal-card">
     <div class="modal-header">
       <div class="modal-title">Nuevo evento</div>
-      <button class="modal-close" onclick="closeModal()">×</button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button id="voice-btn" onclick="startVoice()" title="Crear con voz" style="background:rgba(200,169,110,0.1);border:0.5px solid rgba(200,169,110,0.3);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="5" y="1" width="6" height="9" rx="3" stroke="#C8A96E" stroke-width="1"/><path d="M2.5 8.5A5.5 5.5 0 0 0 8 14a5.5 5.5 0 0 0 5.5-5.5" stroke="#C8A96E" stroke-width="1" stroke-linecap="round"/><line x1="8" y1="14" x2="8" y2="15.5" stroke="#C8A96E" stroke-width="1" stroke-linecap="round"/></svg></button>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+    </div>
+    <div id="voice-status" style="display:none;padding:8px 24px;background:rgba(200,169,110,0.08);border-bottom:0.5px solid rgba(200,169,110,0.1);font-size:12px;color:#C8A96E;letter-spacing:0.06em;text-align:center;">
+      ● ESCUCHANDO... habla ahora
     </div>
     <div class="modal-body">
       <div class="modal-field">
@@ -760,6 +766,7 @@ body { background: #161F2C; font-family: 'DM Sans', sans-serif; min-height: 100v
               <div class="voice-ic"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="5" y="1" width="6" height="9" rx="3" stroke="#9A7B3A" stroke-width="0.9"/><path d="M2.5 8.5A5.5 5.5 0 0 0 8 14a5.5 5.5 0 0 0 5.5-5.5" stroke="#9A7B3A" stroke-width="0.9" stroke-linecap="round"/><line x1="8" y1="14" x2="8" y2="15.5" stroke="#9A7B3A" stroke-width="0.9" stroke-linecap="round"/></svg></div>
               <div class="voice-txt">"Agenda el almuerzo con <strong>Felipe Soto</strong> para el jueves, que sea en Las Condes, no antes de las 13 hrs"</div>
               <div class="voice-age">hace 2 min</div>
+              <button onclick="openModal();setTimeout(startVoice,300)" style="background:rgba(154,123,58,0.1);border:0.5px solid rgba(200,169,110,0.3);border-radius:6px;padding:5px 10px;font-size:10px;color:#9A7B3A;cursor:pointer;flex-shrink:0;letter-spacing:0.06em;">+ NUEVO</button>
             </div>
             <div class="asst-day-cols" id="asst-day-cols">
               <div>
@@ -925,26 +932,26 @@ body { background: #161F2C; font-family: 'DM Sans', sans-serif; min-height: 100v
 
             <div class="inbox-lbl" style="margin-bottom:12px">COMUNICACIÓN</div>
             <div class="integ-grid">
-              <div class="integ-card connected" onclick="showToast('Gmail conectado · última sincronización hace 4 min')"><div class="integ-icon" style="background:#FEF0F0;font-size:18px;">✉</div><div class="integ-body"><div class="integ-name">Gmail</div><div class="integ-desc">Lectura de correos relevantes al negocio</div></div><span class="integ-status on">Activo</span></div>
-              <div class="integ-card" onclick="showToast('Conectar Outlook...')"><div class="integ-icon" style="background:#EEF4FE;font-size:18px;">📧</div><div class="integ-body"><div class="integ-name">Outlook</div><div class="integ-desc">Correo y calendario Microsoft</div></div><span class="integ-status off">Conectar</span></div>
-              <div class="integ-card connected" onclick="showToast('Slack conectado · canal #ejecutivos activo')"><div class="integ-icon" style="background:#F5F0FE;font-size:18px;">💬</div><div class="integ-body"><div class="integ-name">Slack</div><div class="integ-desc">Monitoreo de canales seleccionados</div></div><span class="integ-status on">Activo</span></div>
-              <div class="integ-card" onclick="showToast('Conectar WhatsApp Business...')"><div class="integ-icon" style="background:#EEFAF4;font-size:18px;">📱</div><div class="integ-body"><div class="integ-name">WhatsApp Business</div><div class="integ-desc">Mensajes de contactos VIP</div></div><span class="integ-status off">Conectar</span></div>
+              <div class="integ-card connected" onclick="showToast('Gmail conectado · última sincronización hace 4 min')"><div class="integ-icon" style="background:#EAF0F8;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="#1A3A6B" stroke-width="1"/><path d="M1 6l7 4 7-4" stroke="#1A3A6B" stroke-width="1" stroke-linecap="round"/></svg></div><div class="integ-body"><div class="integ-name">Gmail</div><div class="integ-desc">Lectura de correos relevantes al negocio</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card" onclick="showToast('Conectar Outlook...')"><div class="integ-icon" style="background:#EEF4FE;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="#1A3A6B" stroke-width="1"/><path d="M1 6l7 4 7-4" stroke="#1A3A6B" stroke-width="1" stroke-linecap="round"/></svg></div><div class="integ-body"><div class="integ-name">Outlook</div><div class="integ-desc">Correo y calendario Microsoft</div></div><span class="integ-status off">Conectar</span></div>
+              <div class="integ-card connected" onclick="showToast('Slack conectado · canal #ejecutivos activo')"><div class="integ-icon" style="background:#F5F4F0;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 2h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5l-3 3V3a1 1 0 0 1 1-1z" stroke="#888780" stroke-width="1"/></svg></div><div class="integ-body"><div class="integ-name">Slack</div><div class="integ-desc">Monitoreo de canales seleccionados</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card" onclick="showToast('Conectar WhatsApp Business...')"><div class="integ-icon" style="background:#F5F4F0;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="2" stroke="#888780" stroke-width="1"/><circle cx="8" cy="12" r="0.8" fill="#888780"/></svg></div><div class="integ-body"><div class="integ-name">WhatsApp Business</div><div class="integ-desc">Mensajes de contactos VIP</div></div><span class="integ-status off">Conectar</span></div>
             </div>
 
             <div class="inbox-lbl" style="margin-bottom:12px;margin-top:4px">CALENDARIO Y DOCUMENTOS</div>
             <div class="integ-grid">
-              <div class="integ-card connected" onclick="showToast('Google Calendar sincronizado')"><div class="integ-icon" style="background:#FEF8EE;font-size:18px;">📅</div><div class="integ-body"><div class="integ-name">Google Calendar</div><div class="integ-desc">Sincronización bidireccional</div></div><span class="integ-status on">Activo</span></div>
-              <div class="integ-card" onclick="showToast('Conectar Google Drive...')"><div class="integ-icon" style="background:#FEF8EE;font-size:18px;">📁</div><div class="integ-body"><div class="integ-name">Google Drive</div><div class="integ-desc">Documentos adjuntos a eventos</div></div><span class="integ-status off">Conectar</span></div>
-              <div class="integ-card" onclick="showToast('Conectar OneDrive...')"><div class="integ-icon" style="background:#EEF4FE;font-size:18px;">☁</div><div class="integ-body"><div class="integ-name">OneDrive</div><div class="integ-desc">Archivos Microsoft</div></div><span class="integ-status off">Conectar</span></div>
-              <div class="integ-card connected" onclick="showToast('Zoom conectado · generación automática de links activa')"><div class="integ-icon" style="background:#EEF4FE;font-size:18px;">🎥</div><div class="integ-body"><div class="integ-name">Zoom</div><div class="integ-desc">Links automáticos en eventos</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card connected" onclick="showToast('Google Calendar sincronizado')"><div class="integ-icon" style="background:#FDF3E0;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="#9A7B3A" stroke-width="1"/><path d="M1 6h14M5 1v2M11 1v2" stroke="#9A7B3A" stroke-width="1" stroke-linecap="round"/></svg></div><div class="integ-body"><div class="integ-name">Google Calendar</div><div class="integ-desc">Sincronización bidireccional</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card" onclick="showToast('Conectar Google Drive...')"><div class="integ-icon" style="background:#F5F4F0;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 4a1 1 0 0 1 1-1h4l1.5 2H14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4z" stroke="#888780" stroke-width="1"/></svg></div><div class="integ-body"><div class="integ-name">Google Drive</div><div class="integ-desc">Documentos adjuntos a eventos</div></div><span class="integ-status off">Conectar</span></div>
+              <div class="integ-card" onclick="showToast('Conectar OneDrive...')"><div class="integ-icon" style="background:#EEF4FE;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 11a3 3 0 1 1 .5-5.95A4 4 0 1 1 12 9H4z" stroke="#1A3A6B" stroke-width="1" stroke-linejoin="round"/></svg></div><div class="integ-body"><div class="integ-name">OneDrive</div><div class="integ-desc">Archivos Microsoft</div></div><span class="integ-status off">Conectar</span></div>
+              <div class="integ-card connected" onclick="showToast('Zoom conectado · generación automática de links activa')"><div class="integ-icon" style="background:#EEF4FE;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="9" height="8" rx="1" stroke="#1A3A6B" stroke-width="1"/><path d="M10 7l4-2v6l-4-2V7z" stroke="#1A3A6B" stroke-width="1" stroke-linejoin="round"/></svg></div><div class="integ-body"><div class="integ-name">Zoom</div><div class="integ-desc">Links automáticos en eventos</div></div><span class="integ-status on">Activo</span></div>
             </div>
 
             <div class="inbox-lbl" style="margin-bottom:12px;margin-top:4px">DATOS DEL NEGOCIO</div>
             <div class="integ-grid">
-              <div class="integ-card connected" onclick="showToast('Excel sincronizado · último archivo: Rent Roll abril 2025')"><div class="integ-icon" style="background:#EEFAF4;font-size:18px;">📊</div><div class="integ-body"><div class="integ-name">Excel / CSV</div><div class="integ-desc">KPIs del portafolio inmobiliario</div></div><span class="integ-status on">Activo</span></div>
-              <div class="integ-card connected" onclick="showToast('Banco Central conectado · UF y dólar actualizados automáticamente')"><div class="integ-icon" style="background:#EAF0F8;font-size:18px;">🏛</div><div class="integ-body"><div class="integ-name">Banco Central Chile</div><div class="integ-desc">UF, dólar, IPC en tiempo real</div></div><span class="integ-status on">Activo</span></div>
-              <div class="integ-card" onclick="showToast('Conectar Banchile...')"><div class="integ-icon" style="background:#FDF3E0;font-size:18px;">💰</div><div class="integ-body"><div class="integ-name">Banchile</div><div class="integ-desc">Fondos mutuos e inversiones</div></div><span class="integ-status off">Conectar</span></div>
-              <div class="integ-card" onclick="showToast('Conectar vía Zapier o Make...')"><div class="integ-icon" style="background:#F5F4F0;font-size:18px;">⚡</div><div class="integ-body"><div class="integ-name">Zapier / Make</div><div class="integ-desc">Conecta cualquier sistema propio</div></div><span class="integ-status off">Conectar</span></div>
+              <div class="integ-card connected" onclick="showToast('Excel sincronizado · último archivo: Rent Roll abril 2025')"><div class="integ-icon" style="background:#FDF3E0;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12V8M6 12V5M10 12V7M14 12V3" stroke="#9A7B3A" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="integ-body"><div class="integ-name">Excel / CSV</div><div class="integ-desc">KPIs del portafolio inmobiliario</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card connected" onclick="showToast('Banco Central conectado · UF y dólar actualizados automáticamente')"><div class="integ-icon" style="background:#EAF0F8;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 14h14M3 14V7M7 14V7M13 14V7M1 7h14M8 1L1 5h14L8 1z" stroke="#1A3A6B" stroke-width="1" stroke-linejoin="round"/></svg></div><div class="integ-body"><div class="integ-name">Banco Central Chile</div><div class="integ-desc">UF, dólar, IPC en tiempo real</div></div><span class="integ-status on">Activo</span></div>
+              <div class="integ-card" onclick="showToast('Conectar Banchile...')"><div class="integ-icon" style="background:#FDF3E0;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#9A7B3A" stroke-width="1"/><path d="M8 5v1.5M8 9.5V11M6.5 7.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5S9 9 8 9s-1.5.7-1.5 1.5S7.2 12 8 12" stroke="#9A7B3A" stroke-width="1" stroke-linecap="round"/></svg></div><div class="integ-body"><div class="integ-name">Banchile</div><div class="integ-desc">Fondos mutuos e inversiones</div></div><span class="integ-status off">Conectar</span></div>
+              <div class="integ-card" onclick="showToast('Conectar vía Zapier o Make...')"><div class="integ-icon" style="background:#F5F4F0;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M9 1L3 9h5l-1 6 6-8H8L9 1z" stroke="#888780" stroke-width="1" stroke-linejoin="round"/></svg></div><div class="integ-body"><div class="integ-name">Zapier / Make</div><div class="integ-desc">Conecta cualquier sistema propio</div></div><span class="integ-status off">Conectar</span></div>
             </div>
 
           </div>
@@ -958,23 +965,23 @@ body { background: #161F2C; font-family: 'DM Sans', sans-serif; min-height: 100v
   <!-- Mobile asst tabs -->
   <div class="asst-mobile-tabs" id="asst-mobile-tabs">
     <div class="asst-mobile-tab active" onclick="showAsstPageMobile('panel')">
-      <div class="asst-tab-icon">⊞</div>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" class="asst-tab-svg"><rect x="2" y="2" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="2" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="10" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="10" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
       <div class="asst-tab-label">PANEL</div>
     </div>
     <div class="asst-mobile-tab" onclick="showAsstPageMobile('calendar')">
-      <div class="asst-tab-icon">📅</div>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" class="asst-tab-svg"><rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M2 7h14M6 2v2M12 2v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
       <div class="asst-tab-label">AGENDA</div>
     </div>
     <div class="asst-mobile-tab" onclick="showAsstPageMobile('contacts')">
-      <div class="asst-tab-icon">◎</div>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" class="asst-tab-svg"><circle cx="9" cy="6" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
       <div class="asst-tab-label">CONTACTOS</div>
     </div>
     <div class="asst-mobile-tab" onclick="showAsstPageMobile('pendientes')">
-      <div class="asst-tab-icon">✓</div>
-      <div class="asst-tab-label">PENDIENTES</div>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" class="asst-tab-svg"><path d="M7 9l2 2 4-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="2" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.2"/></svg>
+      <div class="asst-tab-label">PENDING</div>
     </div>
     <div class="asst-mobile-tab" onclick="showAsstPageMobile('integraciones')">
-      <div class="asst-tab-icon">⚡</div>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" class="asst-tab-svg"><circle cx="9" cy="9" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M9 2v2M9 14v2M2 9h2M14 9h2M4.2 4.2l1.4 1.4M12.4 12.4l1.4 1.4M4.2 13.8l1.4-1.4M12.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
       <div class="asst-tab-label">INTEGR.</div>
     </div>
   </div>
@@ -1000,6 +1007,114 @@ function showAsstPageMobile(page) {
   const map = { panel: 0, calendar: 1, contacts: 2, pendientes: 3, integraciones: 4 };
   const tabs = document.querySelectorAll('#asst-mobile-tabs .asst-mobile-tab');
   if (tabs[map[page]]) tabs[map[page]].classList.add('active');
+}
+
+
+// ===== VOICE INPUT =====
+let recognition = null;
+
+function startVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast('Tu browser no soporta reconocimiento de voz');
+    return;
+  }
+
+  const btn = document.getElementById('voice-btn');
+  const status = document.getElementById('voice-status');
+
+  if (recognition) { recognition.stop(); return; }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = 'es-CL';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    btn.style.background = 'rgba(200,169,110,0.3)';
+    btn.style.borderColor = '#C8A96E';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="4" y="4" width="8" height="8" rx="1" stroke="#C8A96E" stroke-width="1"/></svg>';
+    status.style.display = 'block';
+  };
+
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    parseVoiceInput(transcript);
+  };
+
+  recognition.onerror = () => {
+    resetVoiceBtn();
+    showToast('No se pudo capturar el audio — intenta de nuevo');
+  };
+
+  recognition.onend = () => {
+    resetVoiceBtn();
+    recognition = null;
+  };
+
+  recognition.start();
+}
+
+function resetVoiceBtn() {
+  const btn = document.getElementById('voice-btn');
+  const status = document.getElementById('voice-status');
+  if (btn) { btn.style.background = 'rgba(200,169,110,0.1)'; btn.style.borderColor = 'rgba(200,169,110,0.3)'; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="5" y="1" width="6" height="9" rx="3" stroke="#C8A96E" stroke-width="1"/><path d="M2.5 8.5A5.5 5.5 0 0 0 8 14a5.5 5.5 0 0 0 5.5-5.5" stroke="#C8A96E" stroke-width="1" stroke-linecap="round"/><line x1="8" y1="14" x2="8" y2="15.5" stroke="#C8A96E" stroke-width="1" stroke-linecap="round"/></svg>'; }
+  if (status) status.style.display = 'none';
+}
+
+function parseVoiceInput(text) {
+  showToast('Procesando: "' + text + '"');
+
+  const titleInput = document.getElementById('ev-title-input');
+  const timeInput = document.getElementById('ev-time-input');
+  const locInput = document.getElementById('ev-loc-input');
+
+  // Extract title - use full text as base, clean up time/location phrases
+  let title = text;
+
+  // Extract time
+  const timeMatch = text.match(/a las? (\d{1,2})(?::(\d{2}))?\s*(am|pm|hrs|horas)?/i) ||
+                    text.match(/(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    let hour = parseInt(timeMatch[1]);
+    const min = timeMatch[2] ? timeMatch[2].padStart(2,'0') : '00';
+    const period = timeMatch[3] || '';
+    if (period.toLowerCase() === 'pm' && hour < 12) hour += 12;
+    if (hour < 8) hour += 12; // assume PM for ambiguous times
+    timeInput.value = String(hour).padStart(2,'0') + ':' + min;
+    title = title.replace(timeMatch[0], '').trim();
+  }
+
+  // Extract location keywords
+  const locKeywords = ['en ', 'en el ', 'en la ', 'lugar ', 'lugar:'];
+  for (const kw of locKeywords) {
+    const idx = text.toLowerCase().indexOf(kw);
+    if (idx > -1) {
+      const locText = text.slice(idx + kw.length).split(/,|\.|y (?:a las|agenda)/i)[0].trim();
+      if (locText.length > 2 && locText.length < 60) {
+        locInput.value = locText.charAt(0).toUpperCase() + locText.slice(1);
+        title = title.replace(text.slice(idx), '').trim();
+        break;
+      }
+    }
+  }
+
+  // Clean title
+  title = title
+    .replace(/^(agenda|agendar|crear|crea|programa|programar|reunión con|llamada con|almuerzo con)/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Capitalize and set
+  if (title.length > 1) {
+    titleInput.value = title.charAt(0).toUpperCase() + title.slice(1);
+  }
+
+  // Focus next empty field
+  if (!titleInput.value) titleInput.focus();
+  else if (!locInput.value) locInput.focus();
+
+  showToast('Evento creado desde voz — revisa los campos');
 }
 
 function enterApp() {
